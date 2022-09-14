@@ -1,19 +1,31 @@
 var {mongoose}=require('./db1/db1');
+const passport=require('passport')
+const session=require('express-session')
+var cookieSession = require('cookie-session')
 var {stud}=require('./model1/user1');
 var {stud1}=require('./model1/user2');
 var {stud2}=require('./model1/user3');
-var {stud3}=require('./model1/user4');
+var {stud3}=require('./model1/user4'); 
 var {stud4}=require('./model1/user5');
 var {stud5}=require('./model1/user6');
 var {stud6}=require('./model1/user7');
 var {stud7}=require('./model1/user8');
+var checksumLib=require('../paytm/checksum/checksum')
 var {stud8}=require('./model1/user9');
 var express=require('express');
 const fs=require('fs');
-var nodemailer=require('nodemailer');
+// var nodemailer=require('nodemailer');
 var bcrypt=require('bcryptjs');
 var app=express();
+var today=new Date();
 var bodyParser=require('body-parser');
+require('./passport-setup')
+app.use(cookieSession({
+    name: 'session',
+    keys: ['key1', 'key2']
+  }))
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(function(req,res,next){
@@ -76,6 +88,35 @@ app.post('/image1',(req,res)=>{
                 res.send(err);
             });
             });
+            app.get('/payment',(req,res)=>{
+                let params={};
+                params["MID"]='VZiGsC43689890318925',
+                params['WEBSITE']='WEBSTAGING',
+                params['CHANNEL_ID']='WEB',
+                params['INDUSTRY_TYPE_ID']='Retail',
+                params['ORDER_ID']='ORD'+today.getDate()+today.getHours()+today.getMinutes()+today.getSeconds()+"VIP",
+                params['CUST_ID']='CUS'+today.getDate()+today.getHours()+today.getMinutes()+today.getSeconds()+"VIP",
+                params['TXN_AMOUNT']='350',
+                params['CALLBACK_URL']='http://localhost:'+port+'/callback',
+                params['EMAIL']='vipul1999goyal@gmail.com',
+                params['MOBILE_NO']='7230022389'
+
+                checksumLib.genchecksum(params,'H052jEGETv&xvXtl',(err,checksum)=>{
+let txn_url="https://securegw-stage.paytm.in/order/process";
+let formFields="";
+for (x in params){
+    formFields += "<input type='hidden' name='"+x+"' value='"+params[x]+"'/>"
+}
+formFields += "<input typr='hidden' name='CHECKSUMHASH' value='"+checksum+"'> "
+
+var html='<html><body><center>Please Wait</center><form method="post" action="'+txn_url+'" name="paymentForm">'+ formFields+'</form><script type="text/javascript">document.paymentForm.submit()</script></body></html>'
+res.writeHead(200,{'Content-Type':'text/html'});
+res.write(html);
+res.end();
+console.log(err);
+                })
+                
+            })
 app.post('/reg',(req,res)=>{
     console.log(req.body);
     var data=new stud(req.body);
@@ -85,6 +126,39 @@ app.post('/reg',(req,res)=>{
         res.send(err);
     });
     });
+
+    app.get('/failed',(req,res)=>res.send('You Failed to Login'))
+    app.get('/good',(req,res)=>res.send('Welcome mr ${req.user.email}!'))
+
+
+
+    app.get('/spotify', passport.authenticate('spotify',{
+        scope: ['user-read-email', 'user-read-private']
+      }), function(req, res) {
+        // The request will be redirected to spotify for authentication, so this
+        // function will not be called.
+      });
+      
+      app.get(
+        '/spotify/callback',
+        passport.authenticate('spotify', { failureRedirect: '/failed' }),
+        function(req, res) {
+          // Successful authentication, redirect home.
+          res.redirect('/');
+        }
+      );
+    
+  
+    app.get('/google',
+  passport.authenticate('google', { scope: ['profile','email'] }));
+
+app.get('/google/callback', 
+  passport.authenticate('google', { failureRedirect: '/failed' }),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/good');
+  });
+
     app.post('/dreg',(req,res)=>{
         console.log(req.body);
         var data=new stud2(req.body);
