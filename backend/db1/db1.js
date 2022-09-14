@@ -9,6 +9,6 @@ var cb=function(err) {
         console.log("connection failed");
     }
 };
-mongoose.connect("mongodb://localhost:27017/Diagonstic_database",{ useNewUrlParser: true , useUnifiedTopology: true ,useCreateIndex:true},cb);
+mongoose.connect("mongo_db_URL,cb);
 con=mongoose.connection;
 module.exports={mongoose};
